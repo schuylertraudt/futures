@@ -95,3 +95,14 @@ async def odds_api_sports():
         return {"sports": sports}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
+
+
+@router.get("/api/odds-api/bookmakers")
+async def odds_api_bookmakers(sport: str = "americanfootball_nfl", markets: str = "outrights"):
+    """List all bookmaker slugs available for a sport — helps find correct keys for Fanatics, theScore, etc."""
+    from app.scanner import _odds_fetcher
+    try:
+        books = await _odds_fetcher.list_bookmakers(sport, markets)
+        return {"bookmakers": books, "sport": sport, "markets": markets}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
