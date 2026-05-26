@@ -45,6 +45,12 @@ class OddsApiFetcher(BaseFetcher):
                 print("[OddsAPI] 422 on bookmakers param — retrying without it to get all available books")
                 del params["bookmakers"]
                 response = await client.get(url, params=params)
+            if response.status_code == 422:
+                # No active events for this sport/market combo (common in offseason).
+                # Return empty without caching so it retries on next scan.
+                print(f"[OddsAPI] No active {markets} markets for {sport} (offseason or market unavailable)")
+                from datetime import datetime, timezone
+                return {"fetched_at": datetime.now(timezone.utc).isoformat(), "data": []}
             response.raise_for_status()
 
         remaining = response.headers.get("x-requests-remaining")

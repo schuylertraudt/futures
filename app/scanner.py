@@ -61,7 +61,15 @@ async def _fetch_kalshi() -> list[NormalizedOdds]:
             raw = await _kalshi_fetcher.fetch(cache_key=cache_key, series_ticker=series)
             all_odds.extend(kalshi_normalizer.normalize(raw))
         except Exception as exc:
-            print(f"[Kalshi] Failed to fetch {series}: {exc}")
+            msg = str(exc)
+            if "401" in msg:
+                print(
+                    f"[Kalshi] Auth failed for {series} — check KALSHI_API_KEY in .env. "
+                    f"Key should be from Kalshi account settings → API Keys page. "
+                    f"Continuing without Kalshi data."
+                )
+            else:
+                print(f"[Kalshi] Failed to fetch {series}: {exc}")
 
     return all_odds
 

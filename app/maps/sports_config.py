@@ -15,25 +15,24 @@ SPORTS_CONFIG = [
         "markets": "outrights",
         "description": "NFL Futures",
     },
-    # Uncomment as you expand:
-    # {
-    #     "sport": "nba",
-    #     "odds_api_key": "basketball_nba",
-    #     "markets": "outrights",
-    #     "description": "NBA Futures",
-    # },
-    # {
-    #     "sport": "mlb",
-    #     "odds_api_key": "baseball_mlb",
-    #     "markets": "outrights",
-    #     "description": "MLB Futures",
-    # },
-    # {
-    #     "sport": "nhl",
-    #     "odds_api_key": "icehockey_nhl",
-    #     "markets": "outrights",
-    #     "description": "NHL Futures",
-    # },
+    {
+        "sport": "nba",
+        "odds_api_key": "basketball_nba",
+        "markets": "outrights",
+        "description": "NBA Futures",
+    },
+    {
+        "sport": "mlb",
+        "odds_api_key": "baseball_mlb",
+        "markets": "outrights",
+        "description": "MLB Futures",
+    },
+    {
+        "sport": "nhl",
+        "odds_api_key": "icehockey_nhl",
+        "markets": "outrights",
+        "description": "NHL Futures",
+    },
 ]
 
 # Display name overrides for book slugs
