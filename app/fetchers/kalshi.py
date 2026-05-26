@@ -23,10 +23,11 @@ class KalshiFetcher(BaseFetcher):
         self._token: str | None = None
         self._token_path = Path(cache_dir) / ".kalshi_token.json"
 
-    def _auth_headers_from_key(self) -> dict:
-        return {"Authorization": f"Bearer {self._api_key}"}
+    def _api_key_headers(self) -> dict:
+        # Kalshi API keys use a dedicated header, not Authorization Bearer
+        return {"KALSHI-ACCESS-KEY": self._api_key}
 
-    def _auth_headers_from_token(self, token: str) -> dict:
+    def _token_headers(self, token: str) -> dict:
         return {"Authorization": f"Bearer {token}"}
 
     def _load_token(self) -> str | None:
@@ -51,8 +52,8 @@ class KalshiFetcher(BaseFetcher):
     async def _authenticate(self) -> str:
         if not self._email or not self._password:
             raise ValueError(
-                "No Kalshi credentials found. Set KALSHI_API_KEY (preferred) "
-                "or KALSHI_EMAIL + KALSHI_PASSWORD in your .env file."
+                "No Kalshi credentials found. Set KALSHI_API_KEY (from Kalshi account "
+                "settings) or KALSHI_EMAIL + KALSHI_PASSWORD in your .env file."
             )
         async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.post(
@@ -67,30 +68,50 @@ class KalshiFetcher(BaseFetcher):
         return token
 
     async def _get_headers(self) -> dict:
-        """Return auth headers, preferring API key over email/password login."""
         if self._api_key:
-            return self._auth_headers_from_key()
+            return self._api_key_headers()
         if self._token:
-            return self._auth_headers_from_token(self._token)
+            return self._token_headers(self._token)
         cached = self._load_token()
         if cached:
             self._token = cached
-            return self._auth_headers_from_token(self._token)
+            return self._token_headers(self._token)
         self._token = await self._authenticate()
-        return self._auth_headers_from_token(self._token)
+        return self._token_headers(self._token)
+
+    async def _request(self, client: httpx.AsyncClient, method: str, url: str, **kwargs) -> httpx.Response:
+        """Make a request, trying both auth header formats if the first returns 401."""
+        headers = await self._get_headers()
+        response = await client.request(method, url, headers=headers, **kwargs)
+
+        if response.status_code == 401 and self._api_key:
+            # Try the other header format as a fallback
+            alt_headers = {"Authorization": f"Bearer {self._api_key}"}
+            response = await client.request(method, url, headers=alt_headers, **kwargs)
+            if response.status_code == 200:
+                # Remember which format worked by patching _api_key_headers
+                print("[Kalshi] API key works with Authorization: Bearer format")
+                self.__class__._api_key_headers = lambda self: {"Authorization": f"Bearer {self._api_key}"}
+
+        if response.status_code == 401 and not self._api_key:
+            # JWT expired — re-authenticate once
+            self._token = None
+            self._token_path.unlink(missing_ok=True)
+            headers = await self._get_headers()
+            response = await client.request(method, url, headers=headers, **kwargs)
+
+        return response
 
     async def fetch(self, cache_key: str, series_ticker: str, **kwargs) -> dict:
         path = self._cache_path(cache_key)
         if self._is_cache_valid(path):
             return self._read_cache(path)
 
-        headers = await self._get_headers()
-        markets = await self._fetch_markets(headers, series_ticker)
-
+        markets = await self._fetch_markets(series_ticker)
         self._write_cache(path, markets)
         return self._read_cache(path)
 
-    async def _fetch_markets(self, headers: dict, series_ticker: str) -> list[dict]:
+    async def _fetch_markets(self, series_ticker: str) -> list[dict]:
         markets = []
         cursor = None
 
@@ -100,21 +121,7 @@ class KalshiFetcher(BaseFetcher):
                 if cursor:
                     params["cursor"] = cursor
 
-                response = await client.get(
-                    f"{KALSHI_BASE}/markets",
-                    headers=headers,
-                    params=params,
-                )
-                if response.status_code == 401 and not self._api_key:
-                    # JWT expired — re-authenticate once
-                    self._token = None
-                    self._token_path.unlink(missing_ok=True)
-                    headers = await self._get_headers()
-                    response = await client.get(
-                        f"{KALSHI_BASE}/markets",
-                        headers=headers,
-                        params=params,
-                    )
+                response = await self._request(client, "GET", f"{KALSHI_BASE}/markets", params=params)
                 response.raise_for_status()
 
                 body = response.json()
@@ -127,15 +134,10 @@ class KalshiFetcher(BaseFetcher):
 
     async def discover_series(self, query: str = "") -> list[dict]:
         """List available Kalshi series, optionally filtered by query string."""
-        headers = await self._get_headers()
+        params: dict = {"limit": 100}
+        if query:
+            params["search"] = query
         async with httpx.AsyncClient(timeout=30.0) as client:
-            params: dict = {"limit": 100}
-            if query:
-                params["search"] = query
-            response = await client.get(
-                f"{KALSHI_BASE}/series",
-                headers=headers,
-                params=params,
-            )
+            response = await self._request(client, "GET", f"{KALSHI_BASE}/series", params=params)
             response.raise_for_status()
         return response.json().get("series", [])
