@@ -11,27 +11,45 @@ markets: Comma-separated Odds API market keys to request per sport.
 SPORTS_CONFIG = [
     {
         "sport": "nfl",
-        "odds_api_key": "americanfootball_nfl",
-        "markets": "outrights",
-        "description": "NFL Futures",
+        "odds_api_key": "americanfootball_nfl_super_bowl_winner",
+        "markets": "h2h",
+        "description": "NFL - Super Bowl Winner",
     },
     {
         "sport": "nba",
-        "odds_api_key": "basketball_nba",
-        "markets": "outrights",
-        "description": "NBA Futures",
+        "odds_api_key": "basketball_nba_championship_winner",
+        "markets": "h2h",
+        "description": "NBA - Championship Winner",
     },
     {
         "sport": "mlb",
-        "odds_api_key": "baseball_mlb",
-        "markets": "outrights",
-        "description": "MLB Futures",
+        "odds_api_key": "baseball_mlb_world_series_winner",
+        "markets": "h2h",
+        "description": "MLB - World Series Winner",
     },
     {
         "sport": "nhl",
-        "odds_api_key": "icehockey_nhl",
-        "markets": "outrights",
-        "description": "NHL Futures",
+        "odds_api_key": "icehockey_nhl_championship_winner",
+        "markets": "h2h",
+        "description": "NHL - Stanley Cup Winner",
+    },
+    {
+        "sport": "ncaaf",
+        "odds_api_key": "americanfootball_ncaaf_championship_winner",
+        "markets": "h2h",
+        "description": "NCAAF - Championship Winner",
+    },
+    {
+        "sport": "golf",
+        "odds_api_key": "golf_us_open_winner",
+        "markets": "h2h",
+        "description": "Golf - US Open Winner",
+    },
+    {
+        "sport": "golf",
+        "odds_api_key": "golf_the_open_championship_winner",
+        "markets": "h2h",
+        "description": "Golf - The Open Championship Winner",
     },
 ]
 
