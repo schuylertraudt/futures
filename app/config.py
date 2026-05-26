@@ -4,7 +4,8 @@ from pydantic import Field
 
 class Settings(BaseSettings):
     odds_api_key: str = ""
-    kalshi_email: str = ""
+    kalshi_api_key: str = ""      # preferred: generate in Kalshi account settings
+    kalshi_email: str = ""        # fallback if not using Google OAuth
     kalshi_password: str = ""
     cache_dir: str = "cache"
     cache_ttl_seconds: int = 7200

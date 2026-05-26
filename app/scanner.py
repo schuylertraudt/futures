@@ -19,6 +19,7 @@ _odds_fetcher = OddsApiFetcher(
     ttl_seconds=settings.cache_ttl_seconds,
 )
 _kalshi_fetcher = KalshiFetcher(
+    api_key=settings.kalshi_api_key,
     email=settings.kalshi_email,
     password=settings.kalshi_password,
     cache_dir=settings.cache_dir,
