@@ -1,0 +1,69 @@
+{
+  "fetched_at": "2025-09-01T18:00:00+00:00",
+  "data": [
+    {
+      "id": "event_sb_2026",
+      "sport_key": "americanfootball_nfl",
+      "sport_title": "NFL",
+      "commence_time": "2026-02-08T23:30:00Z",
+      "home_team": "Super Bowl LX",
+      "away_team": "Super Bowl LX",
+      "bookmakers": [
+        {
+          "key": "pinnacle",
+          "title": "Pinnacle",
+          "last_update": "2025-09-01T17:55:00Z",
+          "markets": [
+            {
+              "key": "outrights",
+              "last_update": "2025-09-01T17:55:00Z",
+              "outcomes": [
+                {"name": "Kansas City Chiefs", "price": 6.50},
+                {"name": "Philadelphia Eagles", "price": 7.00},
+                {"name": "Detroit Lions", "price": 8.00},
+                {"name": "Buffalo Bills", "price": 9.00},
+                {"name": "San Francisco 49ers", "price": 11.00}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2025-09-01T17:55:00Z",
+          "markets": [
+            {
+              "key": "outrights",
+              "last_update": "2025-09-01T17:55:00Z",
+              "outcomes": [
+                {"name": "Kansas City Chiefs", "price": 7.00},
+                {"name": "Philadelphia Eagles", "price": 7.00},
+                {"name": "Detroit Lions", "price": 8.50},
+                {"name": "Buffalo Bills", "price": 9.00},
+                {"name": "San Francisco 49ers", "price": 10.00}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2025-09-01T17:55:00Z",
+          "markets": [
+            {
+              "key": "outrights",
+              "last_update": "2025-09-01T17:55:00Z",
+              "outcomes": [
+                {"name": "Kansas City Chiefs", "price": 6.50},
+                {"name": "Philadelphia Eagles", "price": 7.50},
+                {"name": "Detroit Lions", "price": 8.00},
+                {"name": "Buffalo Bills", "price": 8.50},
+                {"name": "San Francisco 49ers", "price": 11.00}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

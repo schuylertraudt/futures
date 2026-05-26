@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Futures EV Scanner</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="header-left">
+        <h1>Futures EV Scanner</h1>
+        <span id="scan-time" class="meta"></span>
+      </div>
+      <div class="header-right">
+        <span id="credits-badge" class="credits-badge"></span>
+        <button id="refresh-btn" class="btn-refresh">↻ Refresh</button>
+      </div>
+    </header>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="sport-filter">Sport</label>
+        <select id="sport-filter">
+          <option value="">All Sports</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="method-filter">EV Method</label>
+        <select id="method-filter">
+          <option value="both">Both</option>
+          <option value="pinnacle">vs Pinnacle</option>
+          <option value="best">vs Best Line</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="positive-only" />
+          Positive EV only
+        </label>
+      </div>
+      <div class="control-group">
+        <label for="min-ev">Min EV%: <span id="min-ev-val">0%</span></label>
+        <input type="range" id="min-ev" min="-20" max="20" step="0.5" value="0" />
+      </div>
+      <div class="control-group">
+        <label for="book-filter">Book</label>
+        <select id="book-filter">
+          <option value="">All Books</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="status-bar" class="status-bar hidden"></div>
+
+    <div class="table-wrap">
+      <table id="results-table">
+        <thead>
+          <tr>
+            <th data-col="sport" class="sortable">Sport <span class="sort-icon">⇅</span></th>
+            <th data-col="market" class="sortable">Market <span class="sort-icon">⇅</span></th>
+            <th data-col="event" class="sortable">Event <span class="sort-icon">⇅</span></th>
+            <th data-col="selection" class="sortable">Selection <span class="sort-icon">⇅</span></th>
+            <th data-col="book" class="sortable">Book <span class="sort-icon">⇅</span></th>
+            <th data-col="american_odds" class="sortable">Odds <span class="sort-icon">⇅</span></th>
+            <th data-col="ev_vs_pinnacle" class="sortable">EV vs Pinnacle <span class="sort-icon">⇅</span></th>
+            <th data-col="ev_vs_best" class="sortable">EV vs Best <span class="sort-icon">⇅</span></th>
+          </tr>
+        </thead>
+        <tbody id="results-body">
+          <tr><td colspan="8" class="loading">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="row-count" class="row-count"></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

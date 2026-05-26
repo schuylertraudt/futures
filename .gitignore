@@ -1,0 +1,12 @@
+.env
+cache/*.json
+cache/.kalshi_token.json
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+dist/
+.DS_Store

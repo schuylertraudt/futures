@@ -1,0 +1,35 @@
+{
+  "fetched_at": "2025-09-01T18:00:00+00:00",
+  "data": [
+    {
+      "ticker": "NFLWINS-KC-12",
+      "title": "Will the Kansas City Chiefs win 12 or more games in 2025?",
+      "series_ticker": "NFLWINS",
+      "status": "open",
+      "yes_bid": 42,
+      "yes_ask": 46,
+      "no_bid": 54,
+      "no_ask": 58
+    },
+    {
+      "ticker": "NFLWINS-BUF-10",
+      "title": "Will the Buffalo Bills win 10 or more games in 2025?",
+      "series_ticker": "NFLWINS",
+      "status": "open",
+      "yes_bid": 63,
+      "yes_ask": 67,
+      "no_bid": 33,
+      "no_ask": 37
+    },
+    {
+      "ticker": "NFLWINS-UNKNOWN-99",
+      "title": "A market not in our map",
+      "series_ticker": "NFLWINS",
+      "status": "open",
+      "yes_bid": 40,
+      "yes_ask": 44,
+      "no_bid": 56,
+      "no_ask": 60
+    }
+  ]
+}
