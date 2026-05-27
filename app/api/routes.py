@@ -128,11 +128,40 @@ async def oddsblaze_discover(
         raise HTTPException(status_code=502, detail=str(exc))
 
 
+@router.get("/api/oddsblaze/active-futures")
+async def oddsblaze_active_futures():
+    """
+    Return what futures markets OddsBlaze currently has active, and which sportsbooks
+    have lines for each. Use this to discover valid league IDs, market IDs, and book names.
+    """
+    import httpx
+    from app.config import settings
+
+    key = settings.oddsblaze_api_key
+    if not key:
+        raise HTTPException(status_code=400, detail="ODDSBLAZE_API_KEY not set")
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(
+                "https://active.futures.markets.oddsblaze.com/",
+                params={"key": key},
+            )
+        if r.status_code != 200:
+            raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+        return r.json()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+
 @router.get("/api/oddsblaze/probe")
 async def oddsblaze_probe():
     """
     Verify OddsBlaze API key and probe available futures markets.
-    Hits the sportsbooks endpoint first to confirm the key is valid.
+    Hits the sportsbooks endpoint first to confirm the key is valid,
+    then fetches the active-futures manifest to see what's really available.
     """
     import asyncio
     import httpx
@@ -144,58 +173,96 @@ async def oddsblaze_probe():
 
     results = {}
 
-    async def get(url):
+    async def get_raw(url, params=None):
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                r = await client.get(url)
-            if r.status_code == 200:
-                body = r.json()
-                if isinstance(body, list):
-                    return f"HTTP 200 — {len(body)} items"
-                futures = body.get("futures", [])
-                return f"HTTP 200 — {len(futures)} futures"
-            return f"HTTP {r.status_code}: {r.text[:150]}"
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                r = await client.get(url, params=params)
+            return r.status_code, r.text
         except Exception as exc:
-            return f"ERROR: {exc}"
+            return None, str(exc)
 
-    # Step 1: sanity check — leagues endpoint requires no auth (always works if reachable)
-    results["discovery/leagues_no_auth"] = await get(
-        "https://api.oddsblaze.com/v2/leagues.json"
-    )
+    # Step 1: sanity check — leagues endpoint requires no auth
+    status, text = await get_raw("https://api.oddsblaze.com/v2/leagues.json")
+    if status == 200:
+        try:
+            leagues = __import__("json").loads(text)
+            results["discovery/leagues_no_auth"] = f"HTTP 200 — {len(leagues)} leagues"
+        except Exception:
+            results["discovery/leagues_no_auth"] = f"HTTP 200 — (parse error)"
+    else:
+        results["discovery/leagues_no_auth"] = f"HTTP {status}: {text[:150]}"
+
     # Step 2: sportsbooks endpoint — requires key, confirms key is valid
-    results["discovery/sportsbooks"] = await get(
-        f"https://sportsbooks.oddsblaze.com/?key={key}"
+    status, text = await get_raw("https://sportsbooks.oddsblaze.com/", {"key": key})
+    if status == 200:
+        try:
+            books = __import__("json").loads(text)
+            book_names = [b.get("name") or b.get("id") or str(b) for b in (books if isinstance(books, list) else books.get("sportsbooks", []))]
+            results["discovery/sportsbooks"] = f"HTTP 200 — {len(book_names)} books: {book_names}"
+        except Exception:
+            results["discovery/sportsbooks"] = f"HTTP 200 — {text[:300]}"
+    else:
+        results["discovery/sportsbooks"] = f"HTTP {status}: {text[:150]}"
+
+    # Step 3: active futures manifest — shows every live market + which books have lines
+    status, text = await get_raw(
+        "https://active.futures.markets.oddsblaze.com/", {"key": key}
     )
+    if status == 200:
+        try:
+            body = __import__("json").loads(text)
+            leagues = body.get("leagues", [])
+            summary = {}
+            for lg in leagues:
+                markets = lg.get("markets", [])
+                summary[lg["id"]] = {
+                    "name": lg.get("name"),
+                    "market_count": len(markets),
+                    "markets": [
+                        {
+                            "id": m.get("id"),
+                            "name": m.get("name"),
+                            "sportsbooks": m.get("sportsbooks", []),
+                        }
+                        for m in markets
+                    ],
+                }
+            results["active_futures"] = summary
+        except Exception as exc:
+            results["active_futures"] = f"HTTP 200 — parse error: {exc} — {text[:300]}"
+    else:
+        results["active_futures"] = f"HTTP {status}: {text[:150]}"
 
-    # Step 2: probe futures — confirmed books + Pinnacle/FanDuel/theScore
-    futures_candidates = [
-        # Confirmed in docs
-        ("draftkings", "mlb"),
-        ("draftkings", "nba"),
-        ("draftkings", "nhl"),
-        ("draftkings", "nfl"),
-        ("betmgm", "nba"),
-        ("caesars", "nba"),
-        ("betrivers", "nba"),
-        ("fanatics", "nba"),
-        # Not in docs example — may still exist
-        ("fanduel", "nba"),
-        ("fanduel", "mlb"),
-        ("pinnacle", "nba"),
-        ("pinnacle", "mlb"),
-        ("thescore", "nba"),
-        ("thescore-bet", "nba"),
-        ("thescorebet", "nba"),
-    ]
+    # Step 4: spot-check one futures fetch per league from active manifest
+    # (only if we successfully parsed it)
+    if isinstance(results.get("active_futures"), dict):
+        active = results["active_futures"]
+        spot_checks = []
+        for league_id, info in active.items():
+            for market in info.get("markets", []):
+                books_for_market = market.get("sportsbooks", [])
+                if books_for_market:
+                    # Use first listed book for the spot check
+                    spot_checks.append((league_id, books_for_market[0].lower().replace(" ", "")))
+                    break  # one per league is enough
 
-    tasks = {
-        f"{book}/{league}": get(
-            f"https://futures.oddsblaze.com/?key={key}&sportsbook={book}&league={league}"
-        )
-        for book, league in futures_candidates
-    }
-    responses = await asyncio.gather(*tasks.values())
-    for label, result in zip(tasks.keys(), responses):
-        results[f"futures/{label}"] = result
+        async def fetch_futures(league, book_slug):
+            s, t = await get_raw(
+                "https://futures.oddsblaze.com/",
+                {"key": key, "league": league, "sportsbook": book_slug},
+            )
+            if s == 200:
+                try:
+                    body = __import__("json").loads(t)
+                    futures = body.get("futures", [])
+                    return f"HTTP 200 — {len(futures)} futures"
+                except Exception:
+                    return f"HTTP 200 — parse error"
+            return f"HTTP {s}: {t[:100]}"
+
+        tasks = {f"{league}/{book}": fetch_futures(league, book) for league, book in spot_checks}
+        responses = await asyncio.gather(*tasks.values())
+        for label, res in zip(tasks.keys(), responses):
+            results[f"spot_check/{label}"] = res
 
     return results
