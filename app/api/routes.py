@@ -110,10 +110,17 @@ async def odds_api_bookmakers(sport: str = "americanfootball_nfl", markets: str 
 
 @router.get("/api/oddsblaze/discover")
 async def oddsblaze_discover(
-    league: str = Query("nba", description="League ID, e.g. nba, mlb, nhl, nfl, pga"),
-    sportsbook: str | None = Query(None, description="Optional sportsbook filter, e.g. draftkings"),
+    league: str = Query("nba", description="League ID to try, e.g. nba, NBA, mlb, nhl, nfl, pga"),
+    sportsbook: str = Query("draftkings", description="Sportsbook ID (required by OddsBlaze), e.g. draftkings, fanduel"),
 ):
-    """Raw OddsBlaze futures response — use this to verify data and discover league/book IDs."""
+    """
+    Raw OddsBlaze futures response for discovery.
+    Try different league/sportsbook combos to find valid IDs.
+    Examples:
+      /api/oddsblaze/discover?league=nba&sportsbook=draftkings
+      /api/oddsblaze/discover?league=NBA&sportsbook=fanduel
+      /api/oddsblaze/discover?league=basketball_nba&sportsbook=draftkings
+    """
     from app.config import settings
     from app.fetchers.oddsblaze import OddsBlazeFetcher
     fetcher = OddsBlazeFetcher(
