@@ -110,17 +110,10 @@ async def odds_api_bookmakers(sport: str = "americanfootball_nfl", markets: str 
 
 @router.get("/api/oddsblaze/discover")
 async def oddsblaze_discover(
-    league: str = Query("nba", description="League ID to try, e.g. nba, NBA, mlb, nhl, nfl, pga"),
-    sportsbook: str = Query("draftkings", description="Sportsbook ID (required by OddsBlaze), e.g. draftkings, fanduel"),
+    league: str = Query("pga", description="League ID to try, e.g. pga, nba, NBA, mlb, nhl, nfl"),
+    sportsbook: str = Query("fanduel", description="Sportsbook ID, e.g. fanduel, draftkings, betmgm"),
 ):
-    """
-    Raw OddsBlaze futures response for discovery.
-    Try different league/sportsbook combos to find valid IDs.
-    Examples:
-      /api/oddsblaze/discover?league=nba&sportsbook=draftkings
-      /api/oddsblaze/discover?league=NBA&sportsbook=fanduel
-      /api/oddsblaze/discover?league=basketball_nba&sportsbook=draftkings
-    """
+    """Raw OddsBlaze futures response — use to verify data and find valid league/book IDs."""
     from app.config import settings
     from app.fetchers.oddsblaze import OddsBlazeFetcher
     fetcher = OddsBlazeFetcher(
@@ -133,3 +126,53 @@ async def oddsblaze_discover(
         return {"league": league, "sportsbook": sportsbook, "data": data}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
+
+
+@router.get("/api/oddsblaze/probe")
+async def oddsblaze_probe():
+    """
+    Try common league+sportsbook combinations and report which ones return data.
+    Use this to discover valid league IDs without manual trial and error.
+    """
+    import asyncio
+    from app.config import settings
+    from app.fetchers.oddsblaze import OddsBlazeFetcher
+
+    fetcher = OddsBlazeFetcher(
+        api_key=settings.oddsblaze_api_key,
+        cache_dir=settings.cache_dir,
+        ttl_seconds=60,
+    )
+
+    candidates = [
+        ("pga", "fanduel"),
+        ("nba", "fanduel"),
+        ("NBA", "fanduel"),
+        ("basketball_nba", "fanduel"),
+        ("mlb", "fanduel"),
+        ("MLB", "fanduel"),
+        ("baseball_mlb", "fanduel"),
+        ("nhl", "fanduel"),
+        ("NHL", "fanduel"),
+        ("icehockey_nhl", "fanduel"),
+        ("nfl", "fanduel"),
+        ("NFL", "fanduel"),
+    ]
+
+    results = {}
+
+    async def probe(league, book):
+        try:
+            data = await fetcher.discover(league=league, sportsbook=book)
+            futures = data.get("futures", []) if isinstance(data, dict) else []
+            return f"OK — {len(futures)} futures"
+        except Exception as exc:
+            return f"ERROR: {exc}"
+
+    tasks = [probe(lg, bk) for lg, bk in candidates]
+    responses = await asyncio.gather(*tasks)
+
+    for (league, book), result in zip(candidates, responses):
+        results[f"{league}/{book}"] = result
+
+    return results
