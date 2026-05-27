@@ -158,22 +158,35 @@ async def oddsblaze_probe():
         except Exception as exc:
             return f"ERROR: {exc}"
 
-    # Step 1: verify key is valid via sportsbooks endpoint
-    results["sportsbooks_endpoint"] = await get(
-        f"https://sportsbooks.oddsblaze.com/?key={key}"
-    )
+    # Step 1: verify key + discover full sportsbook/league lists
+    discovery_urls = {
+        "sportsbooks": f"https://sportsbooks.oddsblaze.com/?key={key}",
+        "leagues":     f"https://leagues.oddsblaze.com/?key={key}",
+        "markets":     f"https://markets.oddsblaze.com/?key={key}",
+    }
+    disc_responses = await asyncio.gather(*[get(u) for u in discovery_urls.values()])
+    for label, result in zip(discovery_urls.keys(), disc_responses):
+        results[f"discovery/{label}"] = result
 
-    # Step 2: probe futures with confirmed sportsbook IDs from their docs
+    # Step 2: probe futures — confirmed books + Pinnacle/FanDuel/theScore
     futures_candidates = [
+        # Confirmed in docs
         ("draftkings", "mlb"),
         ("draftkings", "nba"),
         ("draftkings", "nhl"),
         ("draftkings", "nfl"),
-        ("betmgm", "mlb"),
         ("betmgm", "nba"),
-        ("caesars", "mlb"),
+        ("caesars", "nba"),
         ("betrivers", "nba"),
-        ("fanatics", "mlb"),
+        ("fanatics", "nba"),
+        # Not in docs example — may still exist
+        ("fanduel", "nba"),
+        ("fanduel", "mlb"),
+        ("pinnacle", "nba"),
+        ("pinnacle", "mlb"),
+        ("thescore", "nba"),
+        ("thescore-bet", "nba"),
+        ("thescorebet", "nba"),
     ]
 
     tasks = {
