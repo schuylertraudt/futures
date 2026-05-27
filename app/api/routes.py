@@ -106,3 +106,23 @@ async def odds_api_bookmakers(sport: str = "americanfootball_nfl", markets: str 
         return {"bookmakers": books, "sport": sport, "markets": markets}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
+
+
+@router.get("/api/oddsblaze/discover")
+async def oddsblaze_discover(
+    league: str = Query("nba", description="League ID, e.g. nba, mlb, nhl, nfl, pga"),
+    sportsbook: str | None = Query(None, description="Optional sportsbook filter, e.g. draftkings"),
+):
+    """Raw OddsBlaze futures response — use this to verify data and discover league/book IDs."""
+    from app.config import settings
+    from app.fetchers.oddsblaze import OddsBlazeFetcher
+    fetcher = OddsBlazeFetcher(
+        api_key=settings.oddsblaze_api_key,
+        cache_dir=settings.cache_dir,
+        ttl_seconds=300,
+    )
+    try:
+        data = await fetcher.discover(league=league, sportsbook=sportsbook)
+        return {"league": league, "sportsbook": sportsbook, "data": data}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
