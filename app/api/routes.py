@@ -158,15 +158,14 @@ async def oddsblaze_probe():
         except Exception as exc:
             return f"ERROR: {exc}"
 
-    # Step 1: verify key + discover full sportsbook/league lists
-    discovery_urls = {
-        "sportsbooks": f"https://sportsbooks.oddsblaze.com/?key={key}",
-        "leagues":     f"https://leagues.oddsblaze.com/?key={key}",
-        "markets":     f"https://markets.oddsblaze.com/?key={key}",
-    }
-    disc_responses = await asyncio.gather(*[get(u) for u in discovery_urls.values()])
-    for label, result in zip(discovery_urls.keys(), disc_responses):
-        results[f"discovery/{label}"] = result
+    # Step 1: sanity check — leagues endpoint requires no auth (always works if reachable)
+    results["discovery/leagues_no_auth"] = await get(
+        "https://api.oddsblaze.com/v2/leagues.json"
+    )
+    # Step 2: sportsbooks endpoint — requires key, confirms key is valid
+    results["discovery/sportsbooks"] = await get(
+        f"https://sportsbooks.oddsblaze.com/?key={key}"
+    )
 
     # Step 2: probe futures — confirmed books + Pinnacle/FanDuel/theScore
     futures_candidates = [
