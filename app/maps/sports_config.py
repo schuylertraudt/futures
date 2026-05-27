@@ -4,11 +4,12 @@ Sports and markets to scan.
 odds_api_key: The Odds API sport key (see https://api.the-odds-api.com/v4/sports)
 markets: Comma-separated Odds API market keys to request per sport.
          Use "outrights" for futures (Super Bowl/championship/division winners).
-         Win totals may appear as a separate event — run /api/discover to inspect
-         what's available once you have a key.
+         Use "totals" for season win totals (Over/Under X.5 wins per team).
+         Win total events open ~July/August for NFL; earlier for NBA/MLB/NHL.
 """
 
 SPORTS_CONFIG = [
+    # --- Championship winner outrights ---
     {
         "sport": "nfl",
         "odds_api_key": "americanfootball_nfl_super_bowl_winner",
@@ -50,6 +51,33 @@ SPORTS_CONFIG = [
         "odds_api_key": "golf_the_open_championship_winner",
         "markets": "outrights",
         "description": "Golf - The Open Championship Winner",
+    },
+    # --- Season win totals (Over/Under) ---
+    # Events appear ~July/Aug for NFL, earlier for other sports.
+    # Returns empty until books post lines — no action needed when they go live.
+    {
+        "sport": "nfl",
+        "odds_api_key": "americanfootball_nfl",
+        "markets": "totals",
+        "description": "NFL - Season Win Totals",
+    },
+    {
+        "sport": "nba",
+        "odds_api_key": "basketball_nba",
+        "markets": "totals",
+        "description": "NBA - Season Win Totals",
+    },
+    {
+        "sport": "mlb",
+        "odds_api_key": "baseball_mlb",
+        "markets": "totals",
+        "description": "MLB - Season Win Totals",
+    },
+    {
+        "sport": "nhl",
+        "odds_api_key": "icehockey_nhl",
+        "markets": "totals",
+        "description": "NHL - Season Win Totals",
     },
 ]
 
