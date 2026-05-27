@@ -102,6 +102,39 @@ def calculate_ev(
     )
 
 
+def calculate_ev_nway_vs_best(
+    target: NormalizedOdds,
+    all_event_odds: list[NormalizedOdds],
+) -> tuple[float | None, float | None, float | None]:
+    """
+    For n-way outrights: devig using the best (highest) available price for each
+    selection across all books, then compute EV for the target line.
+    Returns (ev_vs_best, fair_prob_best, best_available_decimal_for_target).
+    """
+    if not all_event_odds:
+        return None, None, None
+
+    best_by_selection: dict[str, float] = {}
+    for o in all_event_odds:
+        if o.decimal_odds > best_by_selection.get(o.selection, 0.0):
+            best_by_selection[o.selection] = o.decimal_odds
+
+    if len(best_by_selection) < 2:
+        return None, None, None
+
+    fair_probs = multiplicative_devig(list(best_by_selection.items()))
+    fair_p = fair_probs.get(target.selection)
+    if fair_p is None:
+        return None, None, None
+
+    best_for_target = best_by_selection.get(target.selection)
+    return (
+        round(ev_percentage(fair_p, target.decimal_odds), 4),
+        round(fair_p, 6),
+        best_for_target,
+    )
+
+
 def calculate_ev_nway_vs_pinnacle(
     target: NormalizedOdds,
     all_pinnacle_outcomes: list[NormalizedOdds],

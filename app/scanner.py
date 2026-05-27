@@ -8,7 +8,7 @@ from app.fetchers.odds_api import OddsApiFetcher
 from app.fetchers.kalshi import KalshiFetcher
 from app.normalizers import odds_api as odds_normalizer
 from app.normalizers import kalshi as kalshi_normalizer
-from app.calculator import calculate_ev, calculate_ev_nway_vs_pinnacle
+from app.calculator import calculate_ev, calculate_ev_nway_vs_pinnacle, calculate_ev_nway_vs_best
 from app.maps.sports_config import SPORTS_CONFIG
 from app.maps.kalshi_market_map import KALSHI_SERIES_TO_FETCH
 
@@ -86,9 +86,12 @@ def _compute_ev(all_odds: list[NormalizedOdds]) -> list[EVResult]:
     all selections within the same event to share a denominator, so we group
     at the event level first to gather all Pinnacle rows.
     """
-    # Build event-level Pinnacle index for n-way outrights
+    # Build event-level indexes for n-way outrights
     pinnacle_by_event: dict[tuple, list[NormalizedOdds]] = defaultdict(list)
+    all_odds_by_event: dict[tuple, list[NormalizedOdds]] = defaultdict(list)
     for o in all_odds:
+        if o.market == "outrights":
+            all_odds_by_event[(o.sport, o.market, o.event)].append(o)
         if o.book == "pinnacle" and o.market == "outrights":
             pinnacle_by_event[(o.sport, o.market, o.event)].append(o)
 
@@ -103,17 +106,20 @@ def _compute_ev(all_odds: list[NormalizedOdds]) -> list[EVResult]:
         for target in lines:
             ev_result = calculate_ev(target, lines)
 
-            # For n-way outrights, override Method 1 with full-event Pinnacle devig
+            # For n-way outrights, override both EV methods with full-event devig
             if market == "outrights":
-                event_pinnacle = pinnacle_by_event.get((sport, market, event), [])
+                event_key = (sport, market, event)
+                event_pinnacle = pinnacle_by_event.get(event_key, [])
+                event_all = all_odds_by_event.get(event_key, [])
                 ev_pin, fair_pin = calculate_ev_nway_vs_pinnacle(target, event_pinnacle)
+                ev_best, fair_best, best_dec = calculate_ev_nway_vs_best(target, event_all)
                 ev_result = EVResult(
                     odds=ev_result.odds,
                     ev_vs_pinnacle=ev_pin,
-                    ev_vs_best=ev_result.ev_vs_best,
+                    ev_vs_best=ev_best,
                     fair_prob_pinnacle=fair_pin,
-                    fair_prob_best=ev_result.fair_prob_best,
-                    best_available_decimal=ev_result.best_available_decimal,
+                    fair_prob_best=fair_best,
+                    best_available_decimal=best_dec,
                 )
 
             results.append(ev_result)
