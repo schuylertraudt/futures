@@ -130,7 +130,10 @@ async def oddsblaze_discover(
 
 @router.get("/api/oddsblaze/probe")
 async def oddsblaze_probe():
-    """Try different URL structures to find the correct OddsBlaze Futures API format."""
+    """
+    Verify OddsBlaze API key and probe available futures markets.
+    Hits the sportsbooks endpoint first to confirm the key is valid.
+    """
     import asyncio
     import httpx
     from app.config import settings
@@ -139,31 +142,48 @@ async def oddsblaze_probe():
     if not key:
         raise HTTPException(status_code=400, detail="ODDSBLAZE_API_KEY not set")
 
-    # Exact documented example first, then expand
-    url_candidates = [
-        f"https://futures.oddsblaze.com/?key={key}&sportsbook=draftkings&league=mlb",
-        f"https://futures.oddsblaze.com/?key={key}&sportsbook=draftkings&league=nba",
-        f"https://futures.oddsblaze.com/?key={key}&sportsbook=draftkings&league=nhl",
-        f"https://futures.oddsblaze.com/?key={key}&sportsbook=draftkings&league=nfl",
-        f"https://futures.oddsblaze.com/?key={key}&sportsbook=fanduel&league=mlb",
-        f"https://futures.oddsblaze.com/?key={key}&sportsbook=fanduel&league=nba",
-        f"https://futures.oddsblaze.com/?key={key}&sportsbook=betmgm&league=mlb",
-        f"https://futures.oddsblaze.com/?key={key}&sportsbook=betmgm&league=nba",
-    ]
-
     results = {}
 
-    async def probe(url):
+    async def get(url):
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 r = await client.get(url)
-            return f"HTTP {r.status_code}" + (f" — {len(r.json().get('futures', []))} futures" if r.status_code == 200 else f": {r.text[:120]}")
+            if r.status_code == 200:
+                body = r.json()
+                if isinstance(body, list):
+                    return f"HTTP 200 — {len(body)} items"
+                futures = body.get("futures", [])
+                return f"HTTP 200 — {len(futures)} futures"
+            return f"HTTP {r.status_code}: {r.text[:150]}"
         except Exception as exc:
             return f"ERROR: {exc}"
 
-    responses = await asyncio.gather(*[probe(u) for u in url_candidates])
-    for url, result in zip(url_candidates, responses):
-        # Strip key from displayed URL for cleanliness
-        results[url.replace(key, "***")] = result
+    # Step 1: verify key is valid via sportsbooks endpoint
+    results["sportsbooks_endpoint"] = await get(
+        f"https://sportsbooks.oddsblaze.com/?key={key}"
+    )
+
+    # Step 2: probe futures with confirmed sportsbook IDs from their docs
+    futures_candidates = [
+        ("draftkings", "mlb"),
+        ("draftkings", "nba"),
+        ("draftkings", "nhl"),
+        ("draftkings", "nfl"),
+        ("betmgm", "mlb"),
+        ("betmgm", "nba"),
+        ("caesars", "mlb"),
+        ("betrivers", "nba"),
+        ("fanatics", "mlb"),
+    ]
+
+    tasks = {
+        f"{book}/{league}": get(
+            f"https://futures.oddsblaze.com/?key={key}&sportsbook={book}&league={league}"
+        )
+        for book, league in futures_candidates
+    }
+    responses = await asyncio.gather(*tasks.values())
+    for label, result in zip(tasks.keys(), responses):
+        results[f"futures/{label}"] = result
 
     return results
