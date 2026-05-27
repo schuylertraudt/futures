@@ -139,20 +139,16 @@ async def oddsblaze_probe():
     if not key:
         raise HTTPException(status_code=400, detail="ODDSBLAZE_API_KEY not set")
 
-    # Try different URL patterns — the docs example may have wrong format
+    # Exact documented example first, then expand
     url_candidates = [
-        # Query-param style
-        f"https://futures.oddsblaze.com/?key={key}&sportsbook=fanduel&league=pga",
+        f"https://futures.oddsblaze.com/?key={key}&sportsbook=draftkings&league=mlb",
+        f"https://futures.oddsblaze.com/?key={key}&sportsbook=draftkings&league=nba",
+        f"https://futures.oddsblaze.com/?key={key}&sportsbook=draftkings&league=nhl",
+        f"https://futures.oddsblaze.com/?key={key}&sportsbook=draftkings&league=nfl",
+        f"https://futures.oddsblaze.com/?key={key}&sportsbook=fanduel&league=mlb",
         f"https://futures.oddsblaze.com/?key={key}&sportsbook=fanduel&league=nba",
-        # Path style (mirrors odds API: /v1/odds/betmgm_ncaaf.json)
-        f"https://futures.oddsblaze.com/v1/futures/fanduel_pga.json?key={key}",
-        f"https://futures.oddsblaze.com/v1/futures/fanduel_nba.json?key={key}",
-        f"https://futures.oddsblaze.com/v1/fanduel_pga.json?key={key}",
-        f"https://futures.oddsblaze.com/fanduel_pga.json?key={key}",
-        f"https://futures.oddsblaze.com/fanduel_nba.json?key={key}",
-        # data subdomain
-        f"https://data.oddsblaze.com/v1/futures/fanduel_pga.json?key={key}",
-        f"https://data.oddsblaze.com/v1/futures/fanduel_nba.json?key={key}",
+        f"https://futures.oddsblaze.com/?key={key}&sportsbook=betmgm&league=mlb",
+        f"https://futures.oddsblaze.com/?key={key}&sportsbook=betmgm&league=nba",
     ]
 
     results = {}

@@ -22,7 +22,7 @@ class OddsBlazeFetcher(BaseFetcher):
         return self._read_cache(path)
 
     async def _raw_futures(self, league: str, sportsbook: str | None = None) -> dict | list:
-        params: dict = {"key": self._api_key, "price": "decimal"}
+        params: dict = {"key": self._api_key}
         if league:
             params["league"] = league
         if sportsbook:
