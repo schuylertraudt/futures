@@ -130,49 +130,44 @@ async def oddsblaze_discover(
 
 @router.get("/api/oddsblaze/probe")
 async def oddsblaze_probe():
-    """
-    Try common league+sportsbook combinations and report which ones return data.
-    Use this to discover valid league IDs without manual trial and error.
-    """
+    """Try different URL structures to find the correct OddsBlaze Futures API format."""
     import asyncio
+    import httpx
     from app.config import settings
-    from app.fetchers.oddsblaze import OddsBlazeFetcher
 
-    fetcher = OddsBlazeFetcher(
-        api_key=settings.oddsblaze_api_key,
-        cache_dir=settings.cache_dir,
-        ttl_seconds=60,
-    )
+    key = settings.oddsblaze_api_key
+    if not key:
+        raise HTTPException(status_code=400, detail="ODDSBLAZE_API_KEY not set")
 
-    candidates = [
-        ("pga", "fanduel"),
-        ("nba", "fanduel"),
-        ("NBA", "fanduel"),
-        ("basketball_nba", "fanduel"),
-        ("mlb", "fanduel"),
-        ("MLB", "fanduel"),
-        ("baseball_mlb", "fanduel"),
-        ("nhl", "fanduel"),
-        ("NHL", "fanduel"),
-        ("icehockey_nhl", "fanduel"),
-        ("nfl", "fanduel"),
-        ("NFL", "fanduel"),
+    # Try different URL patterns — the docs example may have wrong format
+    url_candidates = [
+        # Query-param style
+        f"https://futures.oddsblaze.com/?key={key}&sportsbook=fanduel&league=pga",
+        f"https://futures.oddsblaze.com/?key={key}&sportsbook=fanduel&league=nba",
+        # Path style (mirrors odds API: /v1/odds/betmgm_ncaaf.json)
+        f"https://futures.oddsblaze.com/v1/futures/fanduel_pga.json?key={key}",
+        f"https://futures.oddsblaze.com/v1/futures/fanduel_nba.json?key={key}",
+        f"https://futures.oddsblaze.com/v1/fanduel_pga.json?key={key}",
+        f"https://futures.oddsblaze.com/fanduel_pga.json?key={key}",
+        f"https://futures.oddsblaze.com/fanduel_nba.json?key={key}",
+        # data subdomain
+        f"https://data.oddsblaze.com/v1/futures/fanduel_pga.json?key={key}",
+        f"https://data.oddsblaze.com/v1/futures/fanduel_nba.json?key={key}",
     ]
 
     results = {}
 
-    async def probe(league, book):
+    async def probe(url):
         try:
-            data = await fetcher.discover(league=league, sportsbook=book)
-            futures = data.get("futures", []) if isinstance(data, dict) else []
-            return f"OK — {len(futures)} futures"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.get(url)
+            return f"HTTP {r.status_code}" + (f" — {len(r.json().get('futures', []))} futures" if r.status_code == 200 else f": {r.text[:120]}")
         except Exception as exc:
             return f"ERROR: {exc}"
 
-    tasks = [probe(lg, bk) for lg, bk in candidates]
-    responses = await asyncio.gather(*tasks)
-
-    for (league, book), result in zip(candidates, responses):
-        results[f"{league}/{book}"] = result
+    responses = await asyncio.gather(*[probe(u) for u in url_candidates])
+    for url, result in zip(url_candidates, responses):
+        # Strip key from displayed URL for cleanliness
+        results[url.replace(key, "***")] = result
 
     return results
