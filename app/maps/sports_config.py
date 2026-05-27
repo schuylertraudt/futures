@@ -52,33 +52,6 @@ SPORTS_CONFIG = [
         "markets": "outrights",
         "description": "Golf - The Open Championship Winner",
     },
-    # --- Season win totals (Over/Under) ---
-    # Events appear ~July/Aug for NFL, earlier for other sports.
-    # Returns empty until books post lines — no action needed when they go live.
-    {
-        "sport": "nfl",
-        "odds_api_key": "americanfootball_nfl",
-        "markets": "totals",
-        "description": "NFL - Season Win Totals",
-    },
-    {
-        "sport": "nba",
-        "odds_api_key": "basketball_nba",
-        "markets": "totals",
-        "description": "NBA - Season Win Totals",
-    },
-    {
-        "sport": "mlb",
-        "odds_api_key": "baseball_mlb",
-        "markets": "totals",
-        "description": "MLB - Season Win Totals",
-    },
-    {
-        "sport": "nhl",
-        "odds_api_key": "icehockey_nhl",
-        "markets": "totals",
-        "description": "NHL - Season Win Totals",
-    },
 ]
 
 # Display name overrides for book slugs
