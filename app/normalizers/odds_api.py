@@ -9,12 +9,21 @@ def decimal_to_american(decimal_odds: float) -> int:
         return round(-100 / (decimal_odds - 1))
 
 
-_SPORT_MAP = {
-    "americanfootball_nfl": "nfl",
-    "basketball_nba": "nba",
-    "baseball_mlb": "mlb",
-    "icehockey_nhl": "nhl",
-}
+_SPORT_PREFIXES = [
+    ("americanfootball_nfl", "nfl"),
+    ("basketball_nba", "nba"),
+    ("baseball_mlb", "mlb"),
+    ("icehockey_nhl", "nhl"),
+    ("americanfootball_ncaaf", "ncaaf"),
+    ("golf_", "golf"),
+]
+
+
+def _map_sport(sport_key: str) -> str:
+    for prefix, sport in _SPORT_PREFIXES:
+        if sport_key.startswith(prefix):
+            return sport
+    return sport_key
 
 _MARKET_MAP = {
     "outrights": "outrights",
@@ -38,7 +47,7 @@ def normalize(raw_response: dict) -> list[NormalizedOdds]:
 
     for event in events:
         sport_key = event.get("sport_key", "")
-        sport = _SPORT_MAP.get(sport_key, sport_key)
+        sport = _map_sport(sport_key)
 
         # For outrights the event name is typically "sport_title" or a synthetic name;
         # for game markets it's home_team vs away_team.
