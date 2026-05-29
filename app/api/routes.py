@@ -266,3 +266,33 @@ async def oddsblaze_probe():
             results[f"spot_check/{label}"] = res
 
     return results
+
+
+@router.get("/api/draftkings/discover")
+async def draftkings_discover():
+    """
+    Load DraftKings NFL futures page via headless Chrome and dump the raw
+    internal API response. Use this to inspect the data structure before
+    building the full normalizer.
+
+    Requires: apt install chromium-browser && pip install undetected-chromedriver
+    First run is slow (~10s) — subsequent calls use the 1-hour disk cache.
+    """
+    from app.fetchers.draftkings import DraftKingsScraper
+    from app.config import settings
+
+    scraper = DraftKingsScraper(cache_dir=settings.cache_dir, ttl_seconds=3600)
+    try:
+        result = await scraper.fetch(
+            cache_key="nfl_futures_discover",
+            event_group_id=DraftKingsScraper.NFL_EVENTGROUP_ID,
+            landing_url=(
+                "https://sportsbook.draftkings.com/leagues/football/nfl"
+                "?category=futures&subcategory=wins"
+            ),
+        )
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    return results
