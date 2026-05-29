@@ -77,31 +77,33 @@ class DraftKingsScraper:
     def _fetch_sync(self, event_group_id: int, landing_url: str) -> dict:
         driver = self._get_driver()
 
-        # Load the real page first — establishes Cloudflare session and cookies
+        # Navigate to the landing page first to warm up the Cloudflare session
         driver.get(landing_url)
-        time.sleep(5)  # wait for Cloudflare challenge + JS render
+        time.sleep(5)
 
-        # Check we're not stuck on a challenge page
-        if "challenge" in driver.current_url or "cf_chl" in driver.page_source[:500]:
+        # Navigate directly to the API URL — Chrome handles Cloudflare natively
+        api_url = (
+            f"https://sportsbook.draftkings.com"
+            f"/sites/US-SB/api/v5/eventgroups/{event_group_id}?format=json"
+        )
+        driver.get(api_url)
+        time.sleep(3)
+
+        # Check for Cloudflare block
+        source = driver.page_source
+        if "cf_chl" in source or "Just a moment" in source:
             raise RuntimeError("Cloudflare challenge not resolved — IP may be blocked")
 
-        # Call DraftKings' internal API from the browser context (same-origin, has cookies)
-        result = driver.execute_async_script(f"""
-            var done = arguments[arguments.length - 1];
-            fetch('/sites/US-SB/api/v5/eventgroups/{event_group_id}?format=json', {{
-                headers: {{'Accept': 'application/json'}}
-            }})
-            .then(r => r.json())
-            .then(d => done({{ok: true, data: d}}))
-            .catch(e => done({{ok: false, error: e.toString()}}));
-        """)
+        # Chrome renders JSON as plain text in <body> or <pre>
+        body_text = driver.execute_script("return document.body.innerText")
+        if not body_text:
+            raise RuntimeError("Empty response from DraftKings API URL")
 
-        if not result:
-            raise RuntimeError("No response from DraftKings API (script timeout?)")
-        if not result.get("ok"):
-            raise RuntimeError(f"DraftKings API error: {result.get('error')}")
-
-        return result["data"]
+        try:
+            return json.loads(body_text)
+        except json.JSONDecodeError:
+            preview = body_text[:200]
+            raise RuntimeError(f"DraftKings returned non-JSON: {preview}")
 
     async def fetch(self, cache_key: str, event_group_id: int, landing_url: str) -> dict:
         path = self._cache_path(cache_key)
