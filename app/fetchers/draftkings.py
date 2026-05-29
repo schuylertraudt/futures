@@ -68,7 +68,7 @@ class DraftKingsScraper:
         options.add_argument("--disable-background-networking")
         options.add_argument("--disable-sync")
 
-        self._driver = uc.Chrome(options=options)
+        self._driver = uc.Chrome(options=options, version_main=148)
         self._driver.set_script_timeout(30)
         return self._driver
 
